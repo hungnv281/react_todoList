@@ -1,0 +1,9 @@
+.ant-layout-has-sider {
+    padding: 0 10%;
+    .ant-layout-content {
+        width: 100%;
+        .ant-table-wrapper {
+            width: 100%;
+        }
+    }
+}
