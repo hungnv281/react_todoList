@@ -1,6 +1,10 @@
-import { Button, Modal, Table, Form, Input, Popconfirm } from "antd";
-import React, { useCallback, useMemo, useState } from "react";
+import { Button, Modal, Table, Form, Input, Popconfirm, Space } from "antd";
+import React, { useCallback, useMemo, useState, useRef } from "react";
+import Highlighter from "react-highlight-words";
+
 // import FormStudent from "./FormStudent";
+import { SearchOutlined } from "@ant-design/icons";
+
 import { InfoCircleOutlined } from "@ant-design/icons";
 import NullData from "../../NullData";
 // import "../../../style/antdTodoStyle/ListStudent.scss";
@@ -8,6 +12,20 @@ import "../../../../style/antdTodoStyle/ListStudent.scss";
 const ListLecture = (props) => {
   const [form] = Form.useForm();
   const [id, setId] = useState(null);
+  const [searchText, setSearchText] = useState("");
+  const [searchedColumn, setSearchedColumn] = useState("");
+  const searchInput = useRef(null);
+
+  const handleSearch = (selectedKeys, confirm, dataIndex) => {
+    confirm();
+    setSearchText(selectedKeys[0]);
+    setSearchedColumn(dataIndex);
+  };
+
+  const handleReset = (clearFilters) => {
+    clearFilters();
+    setSearchText("");
+  };
   const {
     addLecture,
     isOpenModal,
@@ -35,90 +53,189 @@ const ListLecture = (props) => {
     [form, handleOk]
   );
 
-  const columns = useMemo(
-    () => [
-      {
-        title: "Name",
-        dataIndex: "name",
-        key: "name",
-        fixed: "left",
-        width: 30,
-      },
-      {
-        title: "DateOfBirth",
-        dataIndex: "dateOfBirth",
-        key: "dateOfBirth",
-        // fixed: "left",
-        width: 50,
-      },
-      {
-        title: "Address",
-        dataIndex: "address",
-        key: "address",
-        // fixed: "left",
-        width: 30,
-      },
-      {
-        title: "PhoneNumber",
-        dataIndex: "phoneNumber",
-        width: 60,
-        key: "phoneNumber",
-        // fixed: "left",
-      },
-      {
-        title: "Gender",
-        dataIndex: "gender",
-        width: 50,
-        key: "gender",
-        // fixed: "left",
-      },
-      //   {
-      //     title: "Gender",
-      //     dataIndex: "gender",
-      //     key: "gender",
-      //     // fixed: "left",
-      //     width: 50,
-      //     // maxWidth: 50,
-      //   },
-      {
-        title: "Action",
-        dataIndex: "action",
-        key: "action",
-        width: 60,
-        fixed: "right",
-        render: (_, record) => (
-          // <p>hello</p>
-          <div>
-            <Button
-              type="primary"
-              style={{ width: 60, marginRight: 10 }}
-              onClick={() => {
-                showLectureEdit(record);
-              }}
-            >
-              Edit
-            </Button>
-            <Popconfirm
-              title="are you sure ?"
-              okText="yes"
-              cancelText="no"
-              onConfirm={() => deleteLecture(record)}
-            >
-              <Button danger type="primary" style={{ width: 70 }}>
-                Delete
-              </Button>
-            </Popconfirm>
-          </div>
+  const getColumnSearchProps = (dataIndex) => ({
+    filterDropdown: ({
+      setSelectedKeys,
+      selectedKeys,
+      confirm,
+      clearFilters,
+    }) => (
+      <div
+        style={{
+          padding: 8,
+        }}
+      >
+        <Input
+          ref={searchInput}
+          placeholder={`Search ${dataIndex}`}
+          value={selectedKeys[0]}
+          onChange={(e) =>
+            setSelectedKeys(e.target.value ? [e.target.value] : [])
+          }
+          onPressEnter={() => handleSearch(selectedKeys, confirm, dataIndex)}
+          style={{
+            marginBottom: 8,
+            display: "block",
+          }}
+        />
+        <Space>
+          <Button
+            type="primary"
+            onClick={() => handleSearch(selectedKeys, confirm, dataIndex)}
+            icon={<SearchOutlined />}
+            size="small"
+            style={{
+              width: 90,
+            }}
+          >
+            Search
+          </Button>
+          <Button
+            onClick={() => clearFilters && handleReset(clearFilters)}
+            size="small"
+            style={{
+              width: 90,
+            }}
+          >
+            Reset
+          </Button>
+          <Button
+            type="link"
+            size="small"
+            onClick={() => {
+              confirm({
+                closeDropdown: false,
+              });
+              setSearchText(selectedKeys[0]);
+              setSearchedColumn(dataIndex);
+            }}
+          >
+            Filter
+          </Button>
+        </Space>
+      </div>
+    ),
+    filterIcon: (filtered) => (
+      <SearchOutlined
+        style={{
+          color: filtered ? "#1890ff" : undefined,
+        }}
+      />
+    ),
+    onFilter: (value, record) =>
+      record[dataIndex].toString().toLowerCase().includes(value.toLowerCase()),
+    onFilterDropdownVisibleChange: (visible) => {
+      if (visible) {
+        setTimeout(() => searchInput.current?.select(), 100);
+      }
+    },
+    render: (text) =>
+      searchedColumn === dataIndex ? (
+        <Highlighter
+          highlightStyle={{
+            backgroundColor: "#ffc069",
+            padding: 0,
+          }}
+          searchWords={[searchText]}
+          autoEscape
+          textToHighlight={text ? text.toString() : ""}
+        />
+      ) : (
+        text
+      ),
+  });
 
-          //   <Space size="middle">
-          //     <button>Invite {record.name}</a>
-          //     <a>Delete</a>
-          //   </Space>
-        ),
-      },
-    ],
-    [deleteLecture, showLectureEdit]
-  );
+  const columns = [
+    {
+      title: "Name",
+      dataIndex: "name",
+      key: "name",
+      fixed: "left",
+      width: 30,
+      sorter: (a, b) => a.name.length - b.name.length,
+      onFilter: (value, record) => record.name.indexOf(value) === 0,
+      ...getColumnSearchProps("name"),
+    },
+    {
+      title: "DateOfBirth",
+      dataIndex: "dateOfBirth",
+      key: "dateOfBirth",
+      // fixed: "left",
+      width: 50,
+      ...getColumnSearchProps("dateOfBirth"),
+    },
+    {
+      title: "Address",
+      dataIndex: "address",
+      key: "address",
+      // fixed: "left",
+      width: 30,
+      ...getColumnSearchProps("address"),
+    },
+    {
+      title: "PhoneNumber",
+      dataIndex: "phoneNumber",
+      width: 60,
+      key: "phoneNumber",
+      // fixed: "left",
+      ...getColumnSearchProps("phoneNumber"),
+    },
+    {
+      title: "Gender",
+      dataIndex: "gender",
+      width: 50,
+      key: "gender",
+      ...getColumnSearchProps("gender"),
+
+      // fixed: "left",
+    },
+    //   {
+    //     title: "Gender",
+    //     dataIndex: "gender",
+    //     key: "gender",
+    //     // fixed: "left",
+    //     width: 50,
+    //     // maxWidth: 50,
+    //   },
+    {
+      title: "Action",
+      dataIndex: "action",
+      key: "action",
+      width: 60,
+      fixed: "right",
+      render: (_, record) => (
+        // <p>hello</p>
+        <div>
+          <Button
+            type="primary"
+            style={{ width: 60, marginRight: 10 }}
+            onClick={() => {
+              showLectureEdit(record);
+            }}
+          >
+            Edit
+          </Button>
+          <Popconfirm
+            title="are you sure ?"
+            okText="yes"
+            cancelText="no"
+            onConfirm={() => deleteLecture(record)}
+          >
+            <Button danger type="primary" style={{ width: 70 }}>
+              Delete
+            </Button>
+          </Popconfirm>
+        </div>
+
+        //   <Space size="middle">
+        //     <button>Invite {record.name}</a>
+        //     <a>Delete</a>
+        //   </Space>
+      ),
+    },
+  ];
+  // [deleteLecture, showLectureEdit]
+  // );
 
   const onFinish = (values) => {
     if (id) {
@@ -222,7 +339,7 @@ const ListLecture = (props) => {
               rules={[
                 {
                   message: "string is not a phone number!!",
-                  required: true,
+                  // required: true,
                   type: "number",
                 },
               ]}
